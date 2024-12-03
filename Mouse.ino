@@ -26,11 +26,16 @@ const int LED_PIN = LED_BUILTIN; // Status LED pin
 // Movement state tracking
 int currentMovement = 0;         // Current movement value (0=none, 1=up, 2=down, 3=handshake)
 
-
+//initialize servos
 Servo myservo;
 Servo myservo2;
+
+//timer variable, don't edit manually as it will be overwritten.
 long timeLeft = 0.0;
+
+//mice speed, do NOT go over 15, the servo will take too much power, causing a arduino shut down
 int speed = 15;
+
 //mice state
 //0 = onward
 //1 = left turning
@@ -69,10 +74,13 @@ void loop() {
   deltaTime = currentTime - oldTime;
   //make the correct noise
 
+
+  //function that sets both servo's speed and direction and keep track of the time
   roam();
 
-
+  //get IMU value
   readImu();
+  
   // Update BLE connection status and handle incoming data
   updateBLE();
   
@@ -80,6 +88,9 @@ void loop() {
   //results in changing the value of currentMovement
   handleInput();
   sendMovement(currentMovement);
+
+  //map the yaw value of the arduino's IMU to a value between 0 - 700, which is the reacheable range of the paddle, 
+  // the value is mapped to 70 and multiplied by 10 is to make sure the value goes up or down by 10. 
   updateState(floor(map(yaw, 0, 360, 0, 70)) * 10);
 
   //Serial.println("s1ss");
@@ -87,12 +98,26 @@ void loop() {
 
 void roam()
 {
+  //tick the time
   timeLeft -= deltaTime;
   Serial.println(timeLeft);
+
+  //if time is smaller then 0, means time to do something
   if(timeLeft <= 0.0)
   {
     //new round of direction
+    //get a new time, for a new direcion, this is how long this around of servo speed and direction will last.
     timeLeft += 1000 + random(-1500, 15500);
+
+    //a state machine here to decide from 7 states.
+    //0: forward
+    //1: turn left
+    //2: turn right
+    //3: turn left backwards
+    //4: turn right backwards
+    //5: turn right backwards with an offset
+    //6: stop fully
+    //usually a random float will give a value between 0 - 5.99, only a very rare chance to have a 6, which results a full stop
     int randomState = floor(random(0, 6));
     switch (randomState) 
     {
